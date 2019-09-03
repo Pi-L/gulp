@@ -13,6 +13,7 @@ var {
 var sass = require('gulp-sass');
 var globSass = require('gulp-sass-globbing');
 var cleanCss = require('gulp-clean-css');
+var glob = require("glob");
 
 // JS
 var uglify = require('gulp-terser');
@@ -89,6 +90,9 @@ var cleanDist = function (done) {
 	del.sync([
 		paths.output
 	]);
+	del.sync([
+		paths.styles.toolsDest
+	]);
 
 	// Signal completion
 	return done();
@@ -119,12 +123,13 @@ var buildStyleImports = function (done) {
 	if (!settings.styles) return done();
 
 	// Run tasks on all Sass files
-	return src(paths.styles.toolsFiles)
+	// using glob.sync to get an array of files sorted by folders
+	return src(glob.sync(paths.styles.toolsFiles))
 		.pipe(globSass({
 			path: '_tools.scss'
 		}, {
 			useSingleQuotes: true,
-			signature: '// glob Imports'
+			signature: '// globsass Imports'
 		}))
 		.pipe(dest(paths.styles.inputFolder));
 };
@@ -220,6 +225,7 @@ var reloadBrowser = function (done) {
 
 // Watch for changes
 var watchSource = function (done) {
+	// will only watch for file modifications, not folders
 	watch([paths.input + '**/*', '!' + paths.styles.toolsDest], series(exports.default, reloadBrowser));
 	done();
 };
