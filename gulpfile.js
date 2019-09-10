@@ -9,34 +9,6 @@ var {
 	parallel
 } = require('gulp');
 
-// SASS
-var sass = require('gulp-sass');
-var globSass = require('gulp-sass-globbing');
-var cleanCss = require('gulp-clean-css');
-var glob = require("glob");
-
-// JS
-var uglify = require('gulp-terser');
-var optimizejs = require('gulp-optimize-js');
-
-//images & SVGs
-var imagemin = require('gulp-imagemin');
-var svgmin = require('gulp-svgmin');
-
-// various
-var prefix = require('gulp-autoprefixer');
-var concat = require('gulp-concat');
-var rename = require('gulp-rename');
-var sourcemaps = require('gulp-sourcemaps');
-
-
-// cleaning
-var del = require('del');
-
-// BrowserSync
-var browserSync = require('browser-sync');
-
-
 var settings = {
 	clean: true,
 	scripts: true,
@@ -47,6 +19,54 @@ var settings = {
 	images: false,
 	reload: true
 };
+
+
+
+// SASS
+var sass;
+var globSass;
+var cleanCss;
+var glob;
+if(settings.styles) {
+	sass = require('gulp-sass');
+	globSass = require('gulp-sass-globbing');
+	cleanCss = require('gulp-clean-css');
+	glob = require("glob");
+}
+
+// JS
+var uglify;
+var optimizejs;
+if (settings.scripts) {
+	uglify = require('gulp-terser');
+	optimizejs = require('gulp-optimize-js');
+}
+
+//images & SVGs
+var imagemin;
+if (settings.images) {
+	imagemin = require('gulp-imagemin');
+}
+
+
+var svgmin;
+if (settings.svgs) {
+	svgmin = require('gulp-svgmin');
+}
+
+// various
+var prefix = require('gulp-autoprefixer');
+var concat = require('gulp-concat');
+var rename = require('gulp-rename');
+var sourcemaps = require('gulp-sourcemaps');
+var changed = require('gulp-changed');
+
+
+// cleaning
+var del = require('del');
+
+// BrowserSync
+var browserSync = require('browser-sync');
 
 // ---------------------------- Paths -------------------------------------
 
@@ -67,6 +87,12 @@ var paths = {
 	images: {
 		input: 'src/images/**/*',
 		output: 'dist/images/'
+	},
+	webFonts: {
+		inputFont: 'node_modules/@fortawesome/fontawesome-free/webfonts/**/*',
+		outputFont: 'src/copy/webfonts/',
+		inputScss: 'node_modules/@fortawesome/fontawesome-free/scss/**/*',
+		outputScss: 'src/scss/webfonts/fontawesome/'
 	},
 	svgs: {
 		input: 'src/svg/*.svg',
@@ -196,8 +222,29 @@ var copyFiles = function (done) {
 
 };
 
+// ------------------------- web Fonts ---------------------------------------
 
-// ----------------------- Server, watch, task running ------------------------ 
+var copyWebFonts = function (done) {
+
+	if (!settings.copy) return done();
+
+	// Copy webfonts files
+	return src(paths.webFonts.inputFont)
+		.pipe(changed(paths.webFonts.outputFont))
+		.pipe(dest(paths.webFonts.outputFont));
+};
+
+var copyWebFontsScss = function (done) {
+
+	if (!settings.copy) return done();
+
+	// Copy webfonts scss files
+	return src(paths.webFonts.inputScss)
+		.pipe(changed(paths.webFonts.outputScss))
+		.pipe(dest(paths.webFonts.outputScss));
+};
+
+// ----------------------- Server, watch, task running ------------------------
 
 // Watch for changes to the src directory
 var startServer = function (done) {
@@ -223,10 +270,11 @@ var reloadBrowser = function (done) {
 	done();
 };
 
+
 // Watch for changes
 var watchSource = function (done) {
 	// will only watch for file modifications, not folders
-	watch([paths.input + '**/*', '!' + paths.styles.toolsDest], series(exports.default, reloadBrowser));
+	watch([paths.input + '**/*', '!' + paths.styles.toolsDest, '!' + paths.webFonts.outputFont + '**/*', '!' + paths.webFonts.outputScss + '**/*'], series(exports.default, reloadBrowser));
 	done();
 };
 
@@ -239,6 +287,8 @@ var watchSource = function (done) {
 exports.default = series(
 	cleanDist,
 	buildStyleImports,
+	copyWebFonts,
+	copyWebFontsScss,
 	parallel(
 		buildScripts,
 		buildStyles,
