@@ -1,6 +1,6 @@
 {
-  "name": "test1",
-  "version": "1.0.1",
+  "name": "template",
+  "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,20 +13,19 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.10.2",
+    "@fortawesome/fontawesome-free": "^5.11.2",
     "@khanacademy/tota11y": "^0.2.0",
     "browser-sync": "^2.26.7",
-    "browserslist": "^4.7.0",
+    "browserslist": "^4.7.2",
     "del": "^5.1.0",
-    "eslint": "^6.4.0",
-    "glob": "^7.1.4",
+    "eslint": "^6.6.0",
     "gulp": "^4.0.2",
-    "gulp-autoprefixer": "^7.0.0",
-    "gulp-changed": "^4.0.1",
+    "gulp-autoprefixer": "^7.0.1",
+    "gulp-changed": "^4.0.2",
     "gulp-clean-css": "^4.2.0",
     "gulp-concat": "^2.6.1",
     "gulp-flatmap": "^1.0.2",
-    "gulp-imagemin": "^6.1.0",
+    "gulp-imagemin": "^6.1.1",
     "gulp-purgecss": "^1.2.0",
     "gulp-rename": "^1.4.0",
     "gulp-sass": "^4.0.2",
@@ -34,10 +33,12 @@
     "gulp-sourcemaps": "^2.6.5",
     "gulp-svgmin": "^2.2.0",
     "gulp-terser": "^1.2.0",
-    "poetic": "^1.0.4"
+    "poetic": "^1.1.0"
   },
   "browserslist": [
     "last 2 version",
-    "> 0%"
-  ]
+    "not dead",
+    "> 0.2%"
+  ],
+  "devDependencies": {}
 }

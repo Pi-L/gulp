@@ -1,7 +1,10 @@
+/* eslint-disable vars-on-top */
 /* eslint-disable no-var */
 /* eslint-disable global-require */
 /* eslint-disable @typescript-eslint/no-var-requires */
 // import all the packages that are required
+
+console.time('Loading plugins');
 
 const {
   src,
@@ -18,8 +21,10 @@ const settings = {
   styles: true,
   svgs: false,
   copy: true,
+  webFonts: false,
   images: false,
-  testing: true,
+  testing: false,
+  ghPages: true,
   reload: true
 };
 
@@ -29,6 +34,7 @@ const concat = require('gulp-concat');
 const rename = require('gulp-rename');
 const sourcemaps = require('gulp-sourcemaps');
 const changed = require('gulp-changed');
+// const hash = require('gulp-hash');
 
 
 // cleaning
@@ -48,6 +54,7 @@ var uglify;
 
 // images & SVGs
 var imagemin;
+// var imageminJpegRecompress;
 var svgmin;
 
 if (settings.styles) {
@@ -63,17 +70,21 @@ if (settings.scripts) {
 
 if (settings.images) {
   imagemin = require('gulp-imagemin');
+  // imageminJpegRecompress = require('imagemin-jpeg-recompress');
 }
 
 if (settings.svgs) {
   svgmin = require('gulp-svgmin');
 }
 
+console.timeEnd('Loading plugins');
+
 // ---------------------------- Paths -------------------------------------
 
 const paths = {
   input: 'src/',
   output: 'dist/',
+  ghPages: 'docs/',
   scripts: {
     input: 'src/scripts/**/*',
     output: 'dist/scripts/'
@@ -107,14 +118,21 @@ const paths = {
 // ------------------------ Cleaning task -------------------------------------
 
 // Remove pre-existing content from output folders
-const cleanDist = function cleanDist(done) {
+const cleanDist = async function cleanDist(done) {
 
   if (!settings.clean) return done();
 
+  // await sleep(3000);
   // Clean the dist folder
   del.sync([
     paths.output
   ]);
+
+  if (settings.ghPages) {
+    del.sync([
+      paths.ghPages
+    ]);
+  }
 
   // Signal completion
   return done();
@@ -145,6 +163,7 @@ const buildStyles = function buildStyles(done) {
 
   // Run tasks on all Sass files
   return src(paths.styles.input)
+    // * enabling @import /**/* type syntaxe - doesn't support chained imports
     .pipe(sassGlob())
     .pipe(sourcemaps.init())
     .pipe(sass({
@@ -159,10 +178,15 @@ const buildStyles = function buildStyles(done) {
     .pipe(rename({
       suffix: '.min'
     }))
-    .pipe(cleanCss())
+    // ! level 2 might break things
+    .pipe(cleanCss({
+      level: 1
+    }))
+    // * remove unused css - very useful with fontawesome
     .pipe(purgeCss({
-      content: [`${paths.output}**/*.html`],
-      whitelist: ['openBurger']
+      content: [`${paths.output}**/*.html`, `${paths.scripts.output}**/*.*`, `${paths.output}**/*.php`],
+      fontFace: false,
+      keyframes: false
     }))
     .pipe(sourcemaps.write('.'))
     .pipe(dest(paths.styles.output));
@@ -175,7 +199,12 @@ const buildImages = function buildImages(done) {
   if (!settings.images) return done();
 
   return src(paths.images.input)
-    .pipe(imagemin()) // minifies images
+    .pipe(imagemin([
+      imagemin.gifsicle({ interlaced: true }),
+      imagemin.jpegtran({ progressive: true }),
+      imagemin.optipng({ optimizationLevel: 5 })
+    ],
+      { verbose: true })) // minifies images
     .pipe(dest(paths.images.output)); // save minified images
 };
 
@@ -199,7 +228,26 @@ const copyFiles = function copyFiles(done) {
 
   // Copy static files
   return src(paths.copy.input)
-    .pipe(dest(paths.copy.output));
+    /*  .pipe(hash()) */
+    .pipe(dest(paths.copy.output))
+
+  /* .pipe(hash.manifest(`${paths.copy.output}/assets.json`, {
+    deleteOld: true,
+    sourceDir: `${__dirname}${paths.copy.output}`
+  }))
+  .pipe(dest('src/copy/'));
+*/
+};
+
+// GitHub Pages folder
+
+const GITHUBPAGES = function gitHubPages(done) {
+
+  if (!settings.ghPages) return done();
+
+  // Copy dist to docs
+  return src(`${paths.output}**/*`)
+    .pipe(dest(paths.ghPages));
 
 };
 
@@ -207,7 +255,7 @@ const copyFiles = function copyFiles(done) {
 
 const copyWebFonts = function copyWebFonts(done) {
 
-  if (!settings.copy) return done();
+  if (!settings.webFonts) return done();
 
   // Copy webfonts files
   return src(paths.webFonts.inputFont)
@@ -217,7 +265,7 @@ const copyWebFonts = function copyWebFonts(done) {
 
 const copyWebFontsScss = function copyWebFontsScss(done) {
 
-  if (!settings.copy) return done();
+  if (!settings.webFonts) return done();
 
   // Copy webfonts scss files
   return src(paths.webFonts.inputScss)
@@ -236,6 +284,8 @@ const testing = function testing(done) {
     .pipe(dest(`${paths.copy.output}/scripts/`));
 
 };
+
+
 
 // ----------------------- Server, watch, task running ------------------------
 
@@ -281,14 +331,16 @@ exports.default = series(
   cleanDist,
   copyWebFonts,
   copyWebFontsScss,
+  copyFiles,
+
   parallel(
     buildScripts,
     buildImages,
     buildSVGs,
-    copyFiles,
+    buildStyles,
     testing
   ),
-  buildStyles
+  GITHUBPAGES
 );
 
 // Watch and reload
